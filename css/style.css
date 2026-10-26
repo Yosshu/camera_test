@@ -189,6 +189,31 @@ h2 {
   border-radius: var(--radius);
 }
 
+.field {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.field label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+select {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+select:disabled {
+  opacity: 0.6;
+}
+
 .button {
   width: 100%;
   padding: 10px 16px;

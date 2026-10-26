@@ -55,6 +55,12 @@ const ALIASES = {
 
 export function describeError(error) {
   const name = ALIASES[error?.name] ?? error?.name;
+  if (name === 'OverconstrainedError' && error.constraint === 'deviceId') {
+    return {
+      title: '選択したカメラが見つかりません',
+      detail: 'カメラが取り外された可能性があります。一覧から選び直してください。',
+    };
+  }
   return MESSAGES[name] ?? {
     title: 'カメラを起動できませんでした',
     detail: `予期しないエラーが発生しました（${error?.name ?? 'Error'}: ${error?.message ?? ''}）。ページを再読み込みしてお試しください。`,
