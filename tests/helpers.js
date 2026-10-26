@@ -22,6 +22,21 @@ export function liveTracks(page) {
     .map((track) => track.label));
 }
 
+// 表示中のトラックの getSettings()
+export function liveTrackSettings(page) {
+  return page.evaluate(() => window.__streams
+    .flatMap((stream) => stream.getVideoTracks())
+    .find((track) => track.readyState === 'live')
+    ?.getSettings() ?? null);
+}
+
+// カメラ情報の表から、見出しに対応する値のセルを取り出す
+export function infoCell(page, label) {
+  return page.locator('#info-table tr')
+    .filter({ has: page.getByRole('rowheader', { name: label, exact: true }) })
+    .locator('td');
+}
+
 export async function failGetUserMedia(page, errorName) {
   await page.addInitScript((name) => {
     navigator.mediaDevices.getUserMedia = async () => {

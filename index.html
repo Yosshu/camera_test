@@ -39,9 +39,32 @@
           <label for="camera-select">カメラ</label>
           <select id="camera-select"></select>
         </div>
+        <div class="field">
+          <label for="resolution-select">解像度</label>
+          <select id="resolution-select"></select>
+        </div>
+        <div class="field">
+          <label for="frame-rate-select">フレームレート</label>
+          <select id="frame-rate-select"></select>
+        </div>
+        <div class="field field-checkbox">
+          <label><input type="checkbox" id="native-only"> ブラウザによる縮小・切り抜きをしない</label>
+          <p class="field-hint" id="native-only-hint">オンにすると、カメラ本来の解像度の中から要求に近いものが選ばれます。</p>
+        </div>
         <button type="button" class="button button-primary" id="toggle-button">カメラを開始</button>
       </section>
     </aside>
+
+    <section class="card info" aria-labelledby="info-heading">
+      <h2 id="info-heading">カメラ情報</h2>
+      <table class="info-table" id="info-table">
+        <tbody></tbody>
+      </table>
+      <details class="raw">
+        <summary>詳細データ（getSettings / getCapabilities）</summary>
+        <pre id="raw-data"></pre>
+      </details>
+    </section>
   </main>
 
   <footer class="app-footer">

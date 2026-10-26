@@ -1,7 +1,12 @@
 // アプリの起動と、画面とカメラの配線。
 import { Camera } from './camera.js';
+import {
+  RESOLUTIONS, FRAME_RATES, findResolution, findFrameRate, supportsNativeOnly,
+  buildVideoConstraints, exceedsResolution, exceedsFrameRate,
+} from './constraints.js';
 import { listCameras, watchCameras } from './devices.js';
 import { checkEnvironment, describeError } from './errors.js';
+import { renderInfo, renderRawData, formatResolution, formatFrameRate } from './info.js';
 import { loadSettings, saveSettings } from './storage.js';
 
 const elements = {
@@ -9,10 +14,16 @@ const elements = {
   video: document.getElementById('video'),
   status: document.getElementById('status'),
   cameraSelect: document.getElementById('camera-select'),
+  resolutionSelect: document.getElementById('resolution-select'),
+  frameRateSelect: document.getElementById('frame-rate-select'),
+  nativeOnly: document.getElementById('native-only'),
+  nativeOnlyHint: document.getElementById('native-only-hint'),
   toggleButton: document.getElementById('toggle-button'),
   message: document.getElementById('message'),
   messageTitle: document.getElementById('message-title'),
   messageDetail: document.getElementById('message-detail'),
+  infoTable: document.getElementById('info-table'),
+  rawData: document.getElementById('raw-data'),
 };
 
 const STATUS_TEXT = { idle: '停止中', starting: '起動中…', live: '表示中' };
@@ -23,6 +34,8 @@ const environmentProblem = checkEnvironment();
 const settings = loadSettings();
 
 let state = 'idle';
+// 今のストリームを開いたときの要求。表示中の値と見比べるために取っておく
+let activeRequest = null;
 // 一覧で実在を確認できたカメラの ID
 let knownDeviceIds = new Set();
 // 一覧の更新が重なったとき、古い結果で上書きしないための番号
@@ -31,10 +44,10 @@ let listRequest = 0;
 function setState(next) {
   state = next;
   elements.frame.dataset.state = state;
-  elements.status.textContent = STATUS_TEXT[state];
   elements.toggleButton.textContent = BUTTON_TEXT[state];
   elements.toggleButton.classList.toggle('button-primary', state !== 'live');
   elements.toggleButton.disabled = state === 'starting' || environmentProblem !== null;
+  updateCameraInfo();
 }
 
 function showMessage({ title, detail }, kind = 'error') {
@@ -46,6 +59,39 @@ function showMessage({ title, detail }, kind = 'error') {
 
 function hideMessage() {
   elements.message.hidden = true;
+}
+
+function updateCameraInfo() {
+  const track = state === 'live' ? camera.track : null;
+  const { video } = elements;
+  renderInfo(elements.infoTable, { track, video, request: activeRequest });
+  renderRawData(elements.rawData, { track, request: activeRequest });
+  markOptionsBeyondLimits(track?.getCapabilities?.() ?? null);
+
+  if (track && video.videoWidth) {
+    const fps = formatFrameRate(track.getSettings().frameRate);
+    elements.status.textContent = `表示中 · ${formatResolution(video.videoWidth, video.videoHeight)} · ${fps}`;
+    elements.frame.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+  } else {
+    elements.status.textContent = STATUS_TEXT[state];
+    elements.frame.style.aspectRatio = '';
+  }
+}
+
+function fillOptions(select, options, value) {
+  select.replaceChildren(...options.map((option) => new Option(option.label, option.value)));
+  select.value = value;
+}
+
+// カメラの上限を超える選択肢に印を付ける。選べなくはしない（要求したら何が起きるか試せるように）
+function markOptionsBeyondLimits(capabilities) {
+  const mark = (select, options, exceeds) => {
+    options.forEach((option, index) => {
+      select.options[index].text = exceeds(option, capabilities) ? `${option.label}（上限超え）` : option.label;
+    });
+  };
+  mark(elements.resolutionSelect, RESOLUTIONS, exceedsResolution);
+  mark(elements.frameRateSelect, FRAME_RATES, exceedsFrameRate);
 }
 
 async function refreshCameraList() {
@@ -77,23 +123,18 @@ async function refreshCameraList() {
   select.disabled = environmentProblem !== null;
 }
 
-function videoConstraints() {
-  const constraints = {};
-  if (settings.deviceId) {
-    // 一覧で確かめた ID は厳密に、前回の記憶だけの ID は「できれば」で指定する
-    constraints.deviceId = knownDeviceIds.has(settings.deviceId)
-      ? { exact: settings.deviceId }
-      : { ideal: settings.deviceId };
-  }
-  return Object.keys(constraints).length > 0 ? constraints : true;
-}
-
 async function startCamera() {
   hideMessage();
   setState('starting');
+  const request = {
+    resolution: findResolution(settings.resolution),
+    frameRate: findFrameRate(settings.frameRate),
+    constraints: buildVideoConstraints(settings, knownDeviceIds),
+  };
   try {
-    const stream = await camera.start(videoConstraints());
+    const stream = await camera.start(request.constraints);
     if (!stream) return;
+    activeRequest = request;
     setState('live');
     settings.deviceId = camera.track.getSettings().deviceId;
     saveSettings(settings);
@@ -110,6 +151,13 @@ function stopCamera() {
   setState('idle');
 }
 
+// 設定を変えたら覚えておき、表示中ならその条件で開き直す
+function changeSetting(key, value) {
+  settings[key] = value;
+  saveSettings(settings);
+  if (state !== 'idle') startCamera();
+}
+
 camera.addEventListener('ended', () => {
   setState('idle');
   showMessage({
@@ -119,16 +167,27 @@ camera.addEventListener('ended', () => {
   refreshCameraList();
 });
 
+// 解像度が変わったとき（開始直後を含む）に表示を合わせる
+elements.video.addEventListener('resize', updateCameraInfo);
+
 elements.toggleButton.addEventListener('click', () => {
   if (camera.active) stopCamera();
   else startCamera();
 });
 
-elements.cameraSelect.addEventListener('change', () => {
-  settings.deviceId = elements.cameraSelect.value;
-  saveSettings(settings);
-  if (state !== 'idle') startCamera();
-});
+elements.cameraSelect.addEventListener('change', () => changeSetting('deviceId', elements.cameraSelect.value));
+elements.resolutionSelect.addEventListener('change', () => changeSetting('resolution', elements.resolutionSelect.value));
+elements.frameRateSelect.addEventListener('change', () => changeSetting('frameRate', elements.frameRateSelect.value));
+elements.nativeOnly.addEventListener('change', () => changeSetting('nativeOnly', elements.nativeOnly.checked));
+
+fillOptions(elements.resolutionSelect, RESOLUTIONS, findResolution(settings.resolution).value);
+fillOptions(elements.frameRateSelect, FRAME_RATES, findFrameRate(settings.frameRate).value);
+elements.nativeOnly.checked = settings.nativeOnly === true;
+if (!supportsNativeOnly()) {
+  elements.nativeOnly.checked = false;
+  elements.nativeOnly.disabled = true;
+  elements.nativeOnlyHint.textContent = 'このブラウザでは指定できません（Chrome / Edge で使えます）。';
+}
 
 setState('idle');
 if (environmentProblem) {

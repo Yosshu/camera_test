@@ -8,7 +8,7 @@ test('開始すると映像が表示され、停止するとカメラが解放�
   await page.getByRole('button', { name: 'カメラを開始' }).click();
 
   await expect(page.getByRole('button', { name: 'カメラを停止' })).toBeVisible();
-  await expect(page.locator('#status')).toHaveText('表示中');
+  await expect(page.locator('#status')).toContainText('表示中');
   await expect.poll(() => page.locator('#video').evaluate((video) => video.videoWidth)).toBeGreaterThan(0);
   expect(await liveTracks(page)).toHaveLength(1);
 
@@ -55,7 +55,7 @@ test('映像が途切れたら停止状態に戻り、案内を表示する', as
   await recordStreams(page);
   await page.goto('./');
   await page.getByRole('button', { name: 'カメラを開始' }).click();
-  await expect(page.locator('#status')).toHaveText('表示中');
+  await expect(page.locator('#status')).toContainText('表示中');
 
   // カメラが取り外されたときと同じく、トラックの ended を発生させる
   await page.evaluate(() => window.__streams[0].getVideoTracks()[0].dispatchEvent(new Event('ended')));

@@ -61,6 +61,12 @@ export function describeError(error) {
       detail: 'カメラが取り外された可能性があります。一覧から選び直してください。',
     };
   }
+  if (name === 'OverconstrainedError' && error.constraint === 'resizeMode') {
+    return {
+      title: 'このカメラでは縮小・切り抜きの禁止を指定できません',
+      detail: '「ブラウザによる縮小・切り抜きをしない」をオフにしてお試しください。',
+    };
+  }
   return MESSAGES[name] ?? {
     title: 'カメラを起動できませんでした',
     detail: `予期しないエラーが発生しました（${error?.name ?? 'Error'}: ${error?.message ?? ''}）。ページを再読み込みしてお試しください。`,

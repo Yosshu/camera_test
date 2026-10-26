@@ -5,7 +5,7 @@ test('開始後にカメラの一覧が表示され、切り替えると前の�
   await recordStreams(page);
   await page.goto('./');
   await page.getByRole('button', { name: 'カメラを開始' }).click();
-  await expect(page.locator('#status')).toHaveText('表示中');
+  await expect(page.locator('#status')).toContainText('表示中');
 
   const select = page.getByLabel('カメラ', { exact: true });
   await expect(select.locator('option')).toHaveText(['fake_device_0', 'fake_device_1']);
@@ -17,7 +17,7 @@ test('開始後にカメラの一覧が表示され、切り替えると前の�
   await select.selectOption({ label: otherLabel });
 
   await expect.poll(() => liveTracks(page)).toEqual([otherLabel]);
-  await expect(page.locator('#status')).toHaveText('表示中');
+  await expect(page.locator('#status')).toContainText('表示中');
 });
 
 test('選んだカメラを覚えておき、次に開いたときも使う', async ({ page }) => {
