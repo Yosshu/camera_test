@@ -50,12 +50,15 @@ npx playwright install chromium   # 初回のみ
 npm test
 ```
 
-push のたびに GitHub Actions でも同じテストが実行されます。
+push と PR のたびに、GitHub Actions でも同じテストが実行されます（`.github/workflows/ci.yml`）。
 
-## GitHub Pages の公開設定
+## GitHub Pages への公開
+
+`main` へ push（PR のマージを含む）してテストが通ると、同じワークフローが GitHub Pages に公開します。テストが失敗したときは公開されません。公開されるのはアプリに必要な `index.html`・`css/`・`js/` だけで、テストや設定ファイルは含めません。
+
+リポジトリ側の設定は1回だけ必要です。
 
 1. リポジトリの Settings → Pages を開く
-2. Source を「Deploy from a branch」にする
-3. Branch を `main`、フォルダを `/(root)` にして保存する
+2. Build and deployment の Source を「GitHub Actions」にする
 
-数分後に公開URLで開けるようになります。無料プランではリポジトリを public にする必要があります。
+無料プランではリポジトリを public にする必要があります。公開をやり直したいときは、Actions タブの「test and deploy」から「Run workflow」で `main` を指定して実行します。
