@@ -16,7 +16,28 @@
   </header>
 
   <main class="layout">
-    <p>準備中です。</p>
+    <section class="viewer" aria-label="カメラ映像">
+      <div class="video-frame" id="video-frame" data-state="idle">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="placeholder">
+          <p>「カメラを開始」を押すと、ここに映像が表示されます。</p>
+          <p class="placeholder-note">ブラウザからカメラの使用許可を求められたら「許可」を選んでください。</p>
+        </div>
+        <span class="status" id="status">停止中</span>
+      </div>
+
+      <div class="message" id="message" role="alert" hidden>
+        <p class="message-title" id="message-title"></p>
+        <p class="message-detail" id="message-detail"></p>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <section class="card">
+        <h2>操作</h2>
+        <button type="button" class="button button-primary" id="toggle-button">カメラを開始</button>
+      </section>
+    </aside>
   </main>
 
   <footer class="app-footer">

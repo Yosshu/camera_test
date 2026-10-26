@@ -17,7 +17,8 @@ export default defineConfig({
     },
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // ヘッドレス専用の軽量版はカメラ API が NotSupportedError になるため、通常版の Chromium を使う
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], channel: 'chromium' } },
   ],
   webServer: {
     command: 'node scripts/serve.mjs',
