@@ -27,3 +27,5 @@ npm test    # Chromium のダミーカメラで動作を確かめます（初回
 カメラは HTTPS か `localhost` でしか使えないため、`index.html` を直接開かずに `npm start` で開いてください。
 
 `main` にマージすると、GitHub Actions がテストを実行し、通れば GitHub Pages に公開します。
+
+構成や、これまでにつまずいた点は [開発メモ](docs/development.md) にまとめています。
