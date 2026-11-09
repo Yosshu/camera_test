@@ -4,7 +4,7 @@ import {
   RESOLUTIONS, FRAME_RATES, findResolution, findFrameRate, supportsNativeOnly,
   buildVideoConstraints, exceedsResolution, exceedsFrameRate,
 } from './constraints.js';
-import { listCameras, watchCameras } from './devices.js';
+import { listCameras, watchCameras, groupCameras, pickStream, STREAM_KINDS } from './devices.js';
 import { checkEnvironment, describeError } from './errors.js';
 import { renderInfo, renderRawData, formatResolution, formatFrameRate } from './info.js';
 import { loadSettings, saveSettings } from './storage.js';
@@ -14,6 +14,8 @@ const elements = {
   video: document.getElementById('video'),
   status: document.getElementById('status'),
   cameraSelect: document.getElementById('camera-select'),
+  streamField: document.getElementById('stream-field'),
+  streamSelect: document.getElementById('stream-select'),
   resolutionSelect: document.getElementById('resolution-select'),
   frameRateSelect: document.getElementById('frame-rate-select'),
   nativeOnly: document.getElementById('native-only'),
@@ -38,6 +40,8 @@ let state = 'idle';
 let activeRequest = null;
 // 一覧で実在を確認できたカメラの ID
 let knownDeviceIds = new Set();
+// RGB-D カメラのカラー・深度などを1台にまとめたカメラの一覧
+let cameraGroups = [];
 // 一覧の更新が重なったとき、古い結果で上書きしないための番号
 let listRequest = 0;
 
@@ -64,7 +68,8 @@ function hideMessage() {
 function updateCameraInfo() {
   const track = state === 'live' ? camera.track : null;
   const { video } = elements;
-  renderInfo(elements.infoTable, { track, video, request: activeRequest });
+  const kind = STREAM_KINDS[findStream(track?.getSettings().deviceId)?.kind];
+  renderInfo(elements.infoTable, { track, video, request: activeRequest, kind });
   renderRawData(elements.rawData, { track, request: activeRequest });
   markOptionsBeyondLimits(track?.getCapabilities?.() ?? null);
 
@@ -105,22 +110,67 @@ async function refreshCameraList() {
   if (request !== listRequest) return;
 
   knownDeviceIds = new Set(cameras.map((device) => device.deviceId));
+  cameraGroups = groupCameras(cameras);
   const select = elements.cameraSelect;
   select.replaceChildren();
 
-  if (cameras.length === 0) {
+  if (cameraGroups.length === 0) {
     // 許可を得る前は名前も ID も分からないので、選択肢を出せない
     select.append(new Option('既定のカメラ（開始後に選べます）', ''));
     select.disabled = true;
+    renderStreamSelect(null);
     return;
   }
 
-  cameras.forEach((device, index) => {
-    select.append(new Option(device.label || `カメラ ${index + 1}`, device.deviceId));
+  cameraGroups.forEach((group, index) => {
+    select.append(new Option(group.name || `カメラ ${index + 1}`, group.key));
   });
-  const selected = camera.track?.getSettings().deviceId ?? settings.deviceId;
-  if (knownDeviceIds.has(selected)) select.value = selected;
+  const selected = camera.track?.getSettings().deviceId ?? preferredDeviceId(settings.deviceId);
+  // まだ選んでいない・選んだカメラが外れたときは、先頭のカメラを表示する
+  const group = findGroup(selected) ?? cameraGroups[0];
+  select.value = group.key;
+  renderStreamSelect(group, selected);
   select.disabled = environmentProblem !== null;
+  if (state === 'live') updateCameraInfo();
+}
+
+function findGroup(deviceId) {
+  return cameraGroups.find((group) => group.streams.some((stream) => stream.deviceId === deviceId));
+}
+
+function findStream(deviceId) {
+  return findGroup(deviceId)?.streams.find((stream) => stream.deviceId === deviceId);
+}
+
+// RGB-D カメラでは、映像の種類を自分で選んでいない限りカラーを使う
+function preferredDeviceId(deviceId) {
+  const group = findGroup(deviceId);
+  if (!group || group.streams.length < 2) return deviceId;
+  if (findStream(deviceId).kind === settings.streamKind) return deviceId;
+  return pickStream(group, settings.streamKind).deviceId;
+}
+
+// 開くカメラ。まだ何も選んでいなければ、一覧に表示しているカメラを使う
+function requestedDeviceId() {
+  if (settings.deviceId) return preferredDeviceId(settings.deviceId);
+  const group = cameraGroups.find((candidate) => candidate.key === elements.cameraSelect.value);
+  return group ? pickStream(group, settings.streamKind).deviceId : undefined;
+}
+
+// 「映像の種類」は、カラー・深度などを持つ RGB-D カメラのときだけ表示する
+function renderStreamSelect(group, deviceId) {
+  const hasChoices = group?.streams.length > 1;
+  elements.streamField.hidden = !hasChoices;
+  if (!hasChoices) {
+    elements.streamSelect.replaceChildren();
+    return;
+  }
+  elements.streamSelect.replaceChildren(...group.streams.map(
+    (stream) => new Option(STREAM_KINDS[stream.kind].label, stream.deviceId),
+  ));
+  elements.streamSelect.value = findGroup(deviceId) === group
+    ? deviceId
+    : pickStream(group, settings.streamKind).deviceId;
 }
 
 async function startCamera() {
@@ -129,7 +179,7 @@ async function startCamera() {
   const request = {
     resolution: findResolution(settings.resolution),
     frameRate: findFrameRate(settings.frameRate),
-    constraints: buildVideoConstraints(settings, knownDeviceIds),
+    constraints: buildVideoConstraints({ ...settings, deviceId: requestedDeviceId() }, knownDeviceIds),
   };
   try {
     const stream = await camera.start(request.constraints);
@@ -144,6 +194,14 @@ async function startCamera() {
   }
   // 許可を得た後はカメラの名前が分かるようになるので、一覧を作り直す
   await refreshCameraList();
+
+  // 許可前で一覧が分からず、ブラウザが RGB-D カメラの深度などを開いたときはカラーに切り替える
+  const opened = state === 'live' ? camera.track.getSettings().deviceId : null;
+  if (opened && preferredDeviceId(opened) !== opened) {
+    settings.deviceId = preferredDeviceId(opened);
+    saveSettings(settings);
+    await startCamera();
+  }
 }
 
 function stopCamera() {
@@ -175,7 +233,17 @@ elements.toggleButton.addEventListener('click', () => {
   else startCamera();
 });
 
-elements.cameraSelect.addEventListener('change', () => changeSetting('deviceId', elements.cameraSelect.value));
+elements.cameraSelect.addEventListener('change', () => {
+  const group = cameraGroups.find((candidate) => candidate.key === elements.cameraSelect.value);
+  const stream = pickStream(group, settings.streamKind);
+  renderStreamSelect(group, stream.deviceId);
+  changeSetting('deviceId', stream.deviceId);
+});
+elements.streamSelect.addEventListener('change', () => {
+  // 自分で選んだ種類は覚えておき、次回もその種類で開く
+  settings.streamKind = findStream(elements.streamSelect.value)?.kind;
+  changeSetting('deviceId', elements.streamSelect.value);
+});
 elements.resolutionSelect.addEventListener('change', () => changeSetting('resolution', elements.resolutionSelect.value));
 elements.frameRateSelect.addEventListener('change', () => changeSetting('frameRate', elements.frameRateSelect.value));
 elements.nativeOnly.addEventListener('change', () => changeSetting('nativeOnly', elements.nativeOnly.checked));
