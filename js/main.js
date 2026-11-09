@@ -4,6 +4,7 @@ import {
   RESOLUTIONS, FRAME_RATES, findResolution, findFrameRate, supportsNativeOnly,
   buildVideoConstraints, exceedsResolution, exceedsFrameRate,
 } from './constraints.js';
+import { DepthView, DEPTH_RANGES, JET_GRADIENT, findDepthRange } from './depth-view.js';
 import { listCameras, watchCameras, groupCameras, pickStream, STREAM_KINDS } from './devices.js';
 import { checkEnvironment, describeError } from './errors.js';
 import { FullscreenView } from './view-mode.js';
@@ -15,6 +16,12 @@ const elements = {
   video: document.getElementById('video'),
   status: document.getElementById('status'),
   fullscreenButton: document.getElementById('fullscreen-button'),
+  depthCanvas: document.getElementById('depth-canvas'),
+  depthLegend: document.getElementById('depth-legend'),
+  depthFields: document.getElementById('depth-fields'),
+  depthModeSelect: document.getElementById('depth-mode-select'),
+  depthRangeField: document.getElementById('depth-range-field'),
+  depthRangeSelect: document.getElementById('depth-range-select'),
   cameraSelect: document.getElementById('camera-select'),
   streamField: document.getElementById('stream-field'),
   streamSelect: document.getElementById('stream-select'),
@@ -36,6 +43,11 @@ const BUTTON_TEXT = { idle: 'カメラを開始', starting: '起動中…', live
 const camera = new Camera(elements.video);
 const environmentProblem = checkEnvironment();
 const settings = loadSettings();
+const depthView = new DepthView(elements.video, elements.depthCanvas, {
+  near: document.getElementById('depth-legend-near'),
+  far: document.getElementById('depth-legend-far'),
+  note: document.getElementById('depth-legend-note'),
+});
 const fullscreen = new FullscreenView(elements.frame, elements.fullscreenButton, {
   canEnter: () => state === 'live',
 });
@@ -75,6 +87,7 @@ function updateCameraInfo() {
   const { video } = elements;
   const kind = STREAM_KINDS[findStream(track?.getSettings().deviceId)?.kind];
   renderInfo(elements.infoTable, { track, video, request: activeRequest, kind });
+  updateDepthView(kind === STREAM_KINDS.depth);
   renderRawData(elements.rawData, { track, request: activeRequest });
   markOptionsBeyondLimits(track?.getCapabilities?.() ?? null);
 
@@ -86,6 +99,16 @@ function updateCameraInfo() {
     elements.status.textContent = STATUS_TEXT[state];
     elements.frame.style.aspectRatio = '';
   }
+}
+
+// 深度を表示しているときは、距離を色で表した映像に置き換える
+function updateDepthView(isDepth) {
+  const colorize = isDepth && settings.depthMode !== 'raw';
+  elements.depthFields.hidden = !isDepth;
+  elements.depthRangeField.hidden = !colorize;
+  elements.frame.classList.toggle('is-depth-color', colorize);
+  if (colorize) depthView.start();
+  else depthView.stop();
 }
 
 function fillOptions(select, options, value) {
@@ -254,10 +277,25 @@ elements.streamSelect.addEventListener('change', () => {
 elements.resolutionSelect.addEventListener('change', () => changeSetting('resolution', elements.resolutionSelect.value));
 elements.frameRateSelect.addEventListener('change', () => changeSetting('frameRate', elements.frameRateSelect.value));
 elements.nativeOnly.addEventListener('change', () => changeSetting('nativeOnly', elements.nativeOnly.checked));
+// 深度の表示方法はカメラを開き直さずに切り替える
+elements.depthModeSelect.addEventListener('change', () => {
+  settings.depthMode = elements.depthModeSelect.value;
+  saveSettings(settings);
+  updateCameraInfo();
+});
+elements.depthRangeSelect.addEventListener('change', () => {
+  settings.depthRange = elements.depthRangeSelect.value;
+  saveSettings(settings);
+  depthView.range = settings.depthRange;
+});
 
 fillOptions(elements.resolutionSelect, RESOLUTIONS, findResolution(settings.resolution).value);
 fillOptions(elements.frameRateSelect, FRAME_RATES, findFrameRate(settings.frameRate).value);
 elements.nativeOnly.checked = settings.nativeOnly === true;
+elements.depthModeSelect.value = settings.depthMode === 'raw' ? 'raw' : 'color';
+fillOptions(elements.depthRangeSelect, DEPTH_RANGES, findDepthRange(settings.depthRange).value);
+depthView.range = settings.depthRange;
+elements.depthLegend.querySelector('.depth-legend-bar').style.background = JET_GRADIENT;
 if (!supportsNativeOnly()) {
   elements.nativeOnly.checked = false;
   elements.nativeOnly.disabled = true;

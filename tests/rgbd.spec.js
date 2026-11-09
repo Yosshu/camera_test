@@ -46,7 +46,7 @@ test('深度を選ぶと切り替わり、次回も深度で開く', async ({ pa
 
   await expect.poll(() => liveTracks(page)).toEqual(['fake_device_0']);
   await expect(infoCell(page, '映像の種類')).toContainText('深度（Depth）');
-  await expect(infoCell(page, '映像の種類')).toContainText('距離を明るさで表した映像です');
+  await expect(infoCell(page, '映像の種類')).toContainText('距離を表す映像です');
 
   await page.reload();
   await page.getByRole('button', { name: 'カメラを開始' }).click();

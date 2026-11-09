@@ -19,11 +19,20 @@
     <section class="viewer" aria-label="カメラ映像">
       <div class="video-frame" id="video-frame" data-state="idle">
         <video id="video" autoplay playsinline muted></video>
+        <canvas class="depth-canvas" id="depth-canvas"></canvas>
         <div class="placeholder">
           <p>「カメラを開始」を押すと、ここに映像が表示されます。</p>
           <p class="placeholder-note">ブラウザからカメラの使用許可を求められたら「許可」を選んでください。</p>
         </div>
         <span class="status" id="status">停止中</span>
+        <div class="depth-legend" id="depth-legend">
+          <div class="depth-legend-bar"></div>
+          <div class="depth-legend-labels">
+            <span>近い <span id="depth-legend-near">—</span></span>
+            <span>遠い <span id="depth-legend-far">—</span></span>
+          </div>
+          <p class="depth-legend-note" id="depth-legend-note"></p>
+        </div>
         <button type="button" class="frame-button" id="fullscreen-button" aria-label="映像だけを全画面表示">
           <svg class="icon-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M4 15v5h5M20 15v5h-5"/></svg>
           <svg class="icon-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
@@ -46,6 +55,19 @@
         <div class="field" id="stream-field" hidden>
           <label for="stream-select">映像の種類</label>
           <select id="stream-select"></select>
+        </div>
+        <div class="depth-fields" id="depth-fields" hidden>
+          <div class="field">
+            <label for="depth-mode-select">深度の表示</label>
+            <select id="depth-mode-select">
+              <option value="color">カラー（近い＝青 → 遠い＝赤）</option>
+              <option value="raw">そのまま（濃淡）</option>
+            </select>
+          </div>
+          <div class="field" id="depth-range-field">
+            <label for="depth-range-select">色を割り当てる距離</label>
+            <select id="depth-range-select"></select>
+          </div>
         </div>
         <div class="field">
           <label for="resolution-select">解像度</label>

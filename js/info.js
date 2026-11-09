@@ -59,7 +59,7 @@ export function renderInfo(table, { track, video, request, kind }) {
   addRow(body, 'カメラ', track.label || '（名前を取得できません）');
   if (kind) {
     addRow(body, '映像の種類', kind.label, kind === STREAM_KINDS.depth
-      ? { note: '距離を明るさで表した映像です。ブラウザでは全体が暗く見えることがあります。' }
+      ? { note: '距離を表す映像です。「深度の表示」で、色付き（近い＝青 → 遠い＝赤）と濃淡を切り替えられます。' }
       : {});
   }
   addRow(body, '解像度', formatResolution(actual.width, actual.height), resolution.width
