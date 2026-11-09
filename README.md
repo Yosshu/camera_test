@@ -34,8 +34,9 @@
 | `js/info.js` | カメラ情報の表示 |
 | `js/errors.js` | エラーの案内文 |
 | `js/storage.js` | 設定の記憶 |
-| `js/fullscreen.js` | 映像だけの全画面表示 |
+| `js/view-mode.js` | 映像だけの全画面表示 |
 | `scripts/build-site.sh` | 公開用のファイルを `_site` に集める |
+| `scripts/check-adblock.mjs` | 公開するファイルが広告ブロッカーに止められないか調べる |
 | `scripts/serve.mjs` | 開発・テスト用のサーバー |
 
 ## ローカルでの確認
@@ -70,3 +71,11 @@ GitHub Pages は CSS・JS をブラウザに10分間キャッシュさせるた�
 2. Build and deployment の Source を「GitHub Actions」にする
 
 無料プランではリポジトリを public にする必要があります。公開をやり直したいときは、Actions タブの「test and deploy」から「Run workflow」で `main` を指定して実行します。
+
+## 広告ブロッカーへの対策
+
+広告ブロッカーは URL の見た目で読み込みを止めます。uBlock Origin は、サポート詐欺ページ対策として github.io 上の `fullscreen.js`・`esc.js`・`before.js`・`beep.mp3` などを、どのサイトのものでも一律に止めます。以前 `js/fullscreen.js` がこれに当たり、画面のスクリプトがまったく動かなくなりました（現在は `js/view-mode.js`）。
+
+- ファイル名やフォルダ名に、広告・追跡・詐欺ページでよく使われる名前（`ad`・`ads`・`banner`・`popup`・`track`・`analytics`・`fullscreen`・`esc` など）を使わない
+- CI で `scripts/check-adblock.mjs` が、公開するすべてのファイルを uBlock Origin の標準フィルタ（uBlock 本体、EasyList、EasyPrivacy）に照らし、止められるものがあれば公開前に失敗させる（ローカルでは `bash scripts/build-site.sh test && npm run check:adblock`）
+- それでもスクリプトが止められたときは、画面に理由と対処（ブロッカーを無効にする、シークレットウィンドウで開く）を表示する

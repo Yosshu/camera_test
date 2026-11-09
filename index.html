@@ -78,5 +78,22 @@
   <footer class="app-footer">
     <p>映像はこの端末のブラウザ内だけで処理され、外部には送信されません。</p>
   </footer>
+
+  <script>
+    // 広告ブロッカーなどで画面のスクリプトを読み込めなかったときに、黙って動かなくなるのではなく理由を知らせる。
+    // ブロッカーに止められないよう、このページの中に直接書いておく。
+    window.addEventListener('load', function () {
+      if (document.body.dataset.app === 'ready') return;
+      var message = document.getElementById('message');
+      message.dataset.kind = 'error';
+      document.getElementById('message-title').textContent = '画面を動かすためのファイルを読み込めませんでした';
+      document.getElementById('message-detail').textContent =
+        '広告ブロッカー（uBlock Origin など）の拡張機能が読み込みを止めている可能性があります。'
+        + 'このサイトでブロッカーを無効にするか、シークレットウィンドウで開いてください。'
+        + '再読み込み（Ctrl + F5）で直ることもあります。';
+      message.hidden = false;
+      document.getElementById('toggle-button').disabled = true;
+    });
+  </script>
 </body>
 </html>

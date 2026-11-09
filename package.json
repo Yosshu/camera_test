@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/serve.mjs",
-    "test": "playwright test"
+    "test": "playwright test",
+    "check:adblock": "node scripts/check-adblock.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"
