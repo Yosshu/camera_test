@@ -1,4 +1,5 @@
 // 要求した設定と、実際にカメラが動いている設定を並べて表示する。
+import { STREAM_KINDS } from './devices.js';
 
 const UNAVAILABLE = 'このブラウザでは取得できません';
 
@@ -41,7 +42,8 @@ export function sameFrameRate(requested, actual) {
   return Math.abs(requested - actual) < 0.5;
 }
 
-export function renderInfo(table, { track, video, request }) {
+// kind: RGB-D カメラの映像の種類（STREAM_KINDS の値）。分からなければ undefined
+export function renderInfo(table, { track, video, request, kind }) {
   const body = table.tBodies[0];
   body.replaceChildren();
   if (!track) {
@@ -55,6 +57,11 @@ export function renderInfo(table, { track, video, request }) {
   const { resolution, frameRate } = request;
 
   addRow(body, 'カメラ', track.label || '（名前を取得できません）');
+  if (kind) {
+    addRow(body, '映像の種類', kind.label, kind === STREAM_KINDS.depth
+      ? { note: '距離を明るさで表した映像です。ブラウザでは全体が暗く見えることがあります。' }
+      : {});
+  }
   addRow(body, '解像度', formatResolution(actual.width, actual.height), resolution.width
     ? {
       note: `要求: ${formatResolution(resolution.width, resolution.height)}`,
