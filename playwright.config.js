@@ -23,7 +23,8 @@ export default defineConfig({
   webServer: {
     command: 'node scripts/serve.mjs',
     url: BASE_URL,
-    env: { PORT: String(PORT) },
+    // SITE_DIR を指定すると、公開用に作ったファイルに対してテストする
+    env: { PORT: String(PORT), ...(process.env.SITE_DIR && { SITE_DIR: process.env.SITE_DIR }) },
     reuseExistingServer: !process.env.CI,
   },
 });

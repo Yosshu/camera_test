@@ -21,6 +21,11 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
+      # 公開するのと同じ形（CSS・JS を版ごとのフォルダに置いたもの）でも画面が動くことを確かめる
+      - name: Test built site
+        run: |
+          bash scripts/build-site.sh "${GITHUB_SHA::12}"
+          SITE_DIR=_site npx playwright test tests/smoke.spec.js tests/camera.spec.js tests/devices.spec.js tests/fullscreen.spec.js
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -51,10 +56,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       # テストや設定ファイルは公開せず、アプリに必要なファイルだけを集める
-      - name: Collect site files
-        run: |
-          mkdir _site
-          cp -r index.html css js _site/
+      - name: Build site
+        run: bash scripts/build-site.sh "${GITHUB_SHA::12}"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
