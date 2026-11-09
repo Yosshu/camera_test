@@ -1,6 +1,6 @@
-# 開発メモ
+# 開発ガイド
 
-このアプリを変更する人向けに、構成と、これまでにつまずいた点をまとめます。使い方と開発の始め方は [README](../README.md) を見てください。
+このアプリを変更するときに知っておくこと（構成、テストと公開の仕組み、守るべき制約）をまとめます。使い方と開発の始め方は [README](../README.md) を見てください。
 
 ## ファイル構成
 
@@ -47,33 +47,34 @@
 
 リポジトリの Settings → Pages の Source は「GitHub Actions」にしてあります。「Deploy from a branch」に変えると公開されなくなります。公開をやり直したいときは、Actions タブの「test and deploy」から `main` を指定して「Run workflow」を実行します。
 
-## これまでにつまずいた点
+## 変更するときの制約
 
-### 更新直後に古い CSS・JS が混ざる
+### `index.html` からの CSS・JS の参照
 
-GitHub Pages は CSS・JS をブラウザに10分間キャッシュさせます。Chrome の通常の再読み込み（F5）では HTML だけが取り直されるため、更新直後は新しい HTML と古い JS が混ざり、画面が崩れることがありました。
+GitHub Pages は CSS・JS をブラウザに10分間キャッシュさせ、Chrome の通常の再読み込みでは HTML だけを取り直します。新しい HTML と古い CSS・JS が混ざらないよう、`scripts/build-site.sh` が公開時に CSS・JS を版（コミットの SHA）ごとのフォルダに置き、`index.html` の参照を書き換えます。
 
-対策として、`scripts/build-site.sh` が CSS・JS を版（コミットの SHA）ごとのフォルダに置き、`index.html` の参照をそこへ書き換えています。そのため、`index.html` から CSS・JS を参照するときは `./css/…`、`./js/…` の形で書いてください（この形を書き換えます）。
+- `index.html` から CSS・JS を参照するときは、`./css/…`・`./js/…` の形で書く（この形だけを書き換える）。
+- JS どうしの `import` は、同じフォルダの中の相対パス（`./camera.js` など）で書く。
 
-### 広告ブロッカーに止められる
+### ファイル名と広告ブロッカー
 
-uBlock Origin の標準フィルタ（`badware.txt`）は、サポート詐欺ページ対策として、github.io 上の `fullscreen.js`・`esc.js`・`before.js`・`beep.mp3` などを、どのサイトのものでも一律に止めます。以前 `js/fullscreen.js` がこれに当たり、`main.js` が丸ごと動かなくなりました（今は `js/view-mode.js`）。
+広告ブロッカーは URL の見た目で読み込みを止めます。たとえば uBlock Origin の標準フィルタ（`badware.txt`）は、サポート詐欺ページ対策として、github.io 上の `fullscreen.js`・`esc.js`・`before.js`・`beep.mp3` などを一律に止めます。モジュールが1つでも止められると、`main.js` は丸ごと動きません。
 
 - ファイル名やフォルダ名に、広告・追跡・詐欺ページでよく使われる語（`ad`・`banner`・`popup`・`track`・`analytics`・`fullscreen`・`esc` など）を使わない。
-- CI の `scripts/check-adblock.mjs` が、uBlock Origin の標準フィルタ（uBlock 本体・EasyList・EasyPrivacy）に照らして確かめる。止められるファイルがあれば公開前に失敗する。
-- それでも止められたときは、`index.html` に直接書いた処理が、画面に理由と対処を表示する。
+- CI では `scripts/check-adblock.mjs` が、公開するファイルを uBlock Origin の標準フィルタ（uBlock 本体・EasyList・EasyPrivacy）に照らして確かめ、止められるものがあれば公開前に失敗する。
+- それでも止められたときは、`index.html` に直接書いた処理が、画面に理由と対処を表示する。この処理は別ファイルにしない（別ファイルにすると、それも止められうる）。
 
-### RGB-D カメラ
+### RGB-D カメラの判別
 
-- RealSense などは、カラーと深度が `… RGB` と `… Depth` という別のカメラとして見えます。名前の末尾の語で種類を判断し、1台にまとめています。製品名に含まれる「Depth Camera」と取り違えないよう、末尾の語だけを見ます。
-- 許可前は名前が分からないため、ブラウザが深度の方を開くことがあります。開いた後に一覧を見て、映像の種類を自分で選んでいなければカラーに切り替えます。
+- RealSense などは、カラーと深度が `… RGB` と `… Depth` という別のカメラとして見える。名前の末尾の語で種類を判断し、1台にまとめる。製品名に含まれる「Depth Camera」と取り違えないよう、末尾の語だけを見る。
+- 許可前は名前が分からないため、ブラウザが深度を開くことがある。開いた後に一覧を見て、映像の種類を自分で選んでいなければカラーに切り替える。
 
 ### 深度の表示
 
-- ブラウザは深度（16 bit、RealSense の標準では 1 = 1 mm）を、8 bit の濃淡（上位の桁）に落として `<video>` に表示します。そのままでは数 m 以内がほぼ真っ黒になります。
-- `js/depth-view.js` は、WebGL2 で映像を `R32F` のテクスチャに読み込んで値を取り出し、色を付けて canvas に描きます。ブラウザが 8 bit しか渡さない場合は、約 25 cm 刻みの値になります。
-- 色の付け方は librealsense の colorizer（RealSense Viewer）に合わせています。
+- ブラウザは深度（16 bit、RealSense の標準では 1 = 1 mm）を、8 bit の濃淡（上位の桁）に落として `<video>` に表示する。そのままでは数 m 以内がほぼ真っ黒になる。
+- `js/depth-view.js` は、WebGL2 で映像を `R32F` のテクスチャに読み込んで値を取り出し、色を付けて canvas に描く。ブラウザが 8 bit しか渡さない場合は、約 25 cm 刻みの値になる。
+- 色の付け方は librealsense の colorizer（RealSense Viewer）に合わせている。
   - 配色は Jet（青 → 水色 → 黄 → 赤 → 暗い赤）で、近いほど青
   - 既定はヒストグラム均等化
   - 値 0（測れなかった画素）は黒
-- 距離は、RealSense の標準の単位（1 = 1 mm）として計算しています。単位の違うカメラでは、凡例の距離がずれます。
+- 距離は、RealSense の標準の単位（1 = 1 mm）として計算する。単位の違うカメラでは、凡例の距離がずれる。

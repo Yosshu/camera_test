@@ -28,4 +28,4 @@ npm test    # Chromium のダミーカメラで動作を確かめます（初回
 
 `main` にマージすると、GitHub Actions がテストを実行し、通れば GitHub Pages に公開します。
 
-構成や、これまでにつまずいた点は [開発メモ](docs/development.md) にまとめています。
+ファイル構成や公開の仕組みなど、変更するときに知っておくことは [docs/development.md](docs/development.md) にあります。
