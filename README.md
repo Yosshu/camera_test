@@ -20,6 +20,7 @@
 - `getSettings()` / `getCapabilities()` の生データの表示
 - カメラが使えないときの理由と対処の案内（許可なし、他アプリが使用中など）
 - 選んだ設定をブラウザに記憶し、次回も同じ設定で開く
+- 映像だけの全画面表示（映像右下のボタン、`F` キー、ダブルクリックで切替。Fullscreen API がないブラウザではページいっぱいに広げる）
 
 ## ファイル構成
 
@@ -33,6 +34,9 @@
 | `js/info.js` | カメラ情報の表示 |
 | `js/errors.js` | エラーの案内文 |
 | `js/storage.js` | 設定の記憶 |
+| `js/fullscreen.js` | 映像だけの全画面表示 |
+| `scripts/build-site.sh` | 公開用のファイルを `_site` に集める |
+| `scripts/serve.mjs` | 開発・テスト用のサーバー |
 
 ## ローカルでの確認
 
@@ -57,6 +61,8 @@ push と PR のたびに、GitHub Actions でも同じテストが実行され�
 ## GitHub Pages への公開
 
 `main` へ push（PR のマージを含む）してテストが通ると、同じワークフローが GitHub Pages に公開します。テストが失敗したときは公開されません。公開されるのはアプリに必要な `index.html`・`css/`・`js/` だけで、テストや設定ファイルは含めません。
+
+GitHub Pages は CSS・JS をブラウザに10分間キャッシュさせるため、更新直後に通常の再読み込みをすると、新しい HTML と古い CSS・JS が混ざることがあります。これを防ぐため、公開時に `scripts/build-site.sh` が CSS・JS を版（コミット）ごとのフォルダに置き、`index.html` の参照を書き換えます。同じ形の公開用ファイルに対しても、CI でテストを実行しています（ローカルでは `bash scripts/build-site.sh test && SITE_DIR=_site npm test -- tests/smoke.spec.js`）。
 
 リポジトリ側の設定は1回だけ必要です。
 

@@ -6,6 +6,7 @@ import {
 } from './constraints.js';
 import { listCameras, watchCameras, groupCameras, pickStream, STREAM_KINDS } from './devices.js';
 import { checkEnvironment, describeError } from './errors.js';
+import { FullscreenView } from './fullscreen.js';
 import { renderInfo, renderRawData, formatResolution, formatFrameRate } from './info.js';
 import { loadSettings, saveSettings } from './storage.js';
 
@@ -13,6 +14,7 @@ const elements = {
   frame: document.getElementById('video-frame'),
   video: document.getElementById('video'),
   status: document.getElementById('status'),
+  fullscreenButton: document.getElementById('fullscreen-button'),
   cameraSelect: document.getElementById('camera-select'),
   streamField: document.getElementById('stream-field'),
   streamSelect: document.getElementById('stream-select'),
@@ -34,6 +36,9 @@ const BUTTON_TEXT = { idle: 'カメラを開始', starting: '起動中…', live
 const camera = new Camera(elements.video);
 const environmentProblem = checkEnvironment();
 const settings = loadSettings();
+const fullscreen = new FullscreenView(elements.frame, elements.fullscreenButton, {
+  canEnter: () => state === 'live',
+});
 
 let state = 'idle';
 // 今のストリームを開いたときの要求。表示中の値と見比べるために取っておく
@@ -217,6 +222,8 @@ function changeSetting(key, value) {
 }
 
 camera.addEventListener('ended', () => {
+  // 全画面のままだと案内が見えないので戻す
+  fullscreen.exit();
   setState('idle');
   showMessage({
     title: 'カメラの映像が途切れました',

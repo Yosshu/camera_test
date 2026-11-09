@@ -216,6 +216,75 @@ h2 {
   vertical-align: 1px;
 }
 
+/* 映像だけの全画面表示 */
+
+.frame-button {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: #ffffff;
+  background: rgb(0 0 0 / 0.55);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.frame-button:hover {
+  background: rgb(0 0 0 / 0.75);
+}
+
+.frame-button svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.video-frame:not([data-state="live"]) .frame-button,
+.frame-button .icon-exit,
+.video-frame.is-fullscreen .frame-button .icon-enter,
+.video-frame.is-fullscreen .status {
+  display: none;
+}
+
+.video-frame.is-fullscreen .frame-button .icon-exit {
+  display: block;
+}
+
+.video-frame.is-fullscreen {
+  border-radius: 0;
+}
+
+/* Fullscreen API が使えないときは、ページいっぱいに広げて代わりにする */
+.video-frame.is-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  max-height: none;
+  aspect-ratio: auto !important;
+}
+
+.has-expanded-frame {
+  overflow: hidden;
+}
+
+.video-frame.is-fullscreen.is-idle {
+  cursor: none;
+}
+
+.video-frame.is-fullscreen.is-idle .frame-button {
+  opacity: 0;
+}
+
 /* 操作パネル */
 
 .card {

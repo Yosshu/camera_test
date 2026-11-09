@@ -1,11 +1,12 @@
 // 開発・テスト用の静的ファイルサーバー。
 // GitHub Pages と同じく /camera_test/ の下で配信し、絶対パス参照のミスに気づけるようにする。
+// SITE_DIR を指定すると、そのフォルダ（scripts/build-site.sh で作った公開用のファイルなど）を配信する。
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const ROOT = resolve(process.env.SITE_DIR ?? fileURLToPath(new URL('..', import.meta.url)));
 const BASE = '/camera_test/';
 const PORT = Number(process.env.PORT ?? 8080);
 
