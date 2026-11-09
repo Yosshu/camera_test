@@ -26,6 +26,9 @@ jobs:
         run: |
           bash scripts/build-site.sh "${GITHUB_SHA::12}"
           SITE_DIR=_site npx playwright test tests/smoke.spec.js tests/camera.spec.js tests/devices.spec.js tests/fullscreen.spec.js
+      # 広告ブロッカー（uBlock Origin の標準フィルタ）に止められるファイルがないか確かめる
+      - name: Check ad blockers
+        run: node scripts/check-adblock.mjs _site
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

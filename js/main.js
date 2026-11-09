@@ -6,7 +6,7 @@ import {
 } from './constraints.js';
 import { listCameras, watchCameras, groupCameras, pickStream, STREAM_KINDS } from './devices.js';
 import { checkEnvironment, describeError } from './errors.js';
-import { FullscreenView } from './fullscreen.js';
+import { FullscreenView } from './view-mode.js';
 import { renderInfo, renderRawData, formatResolution, formatFrameRate } from './info.js';
 import { loadSettings, saveSettings } from './storage.js';
 
